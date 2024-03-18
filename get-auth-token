@@ -1,0 +1,29 @@
+#!/usr/bin/env bb
+(require '[babashka.http-client :as client])
+(require '[clojure.walk :as walk])
+
+(defn- client-id [] "")
+(defn- client-secret [] "")
+(defn- token-url [] "https://login.usw2.pure.cloud/oauth/token")
+
+(defn obtain-access-token [client-id client-secret token-url]
+  (let [params (java.util.HashMap.)
+        _ (.put params "grant_type" "client_credentials")
+        encoder64 (java.util.Base64/getEncoder)
+        encode #(-> (.encodeToString encoder64 %))
+        encoded-credentials (str client-id ":" client-secret)
+        authorization-header (str "Basic " (encode (.getBytes encoded-credentials)))
+        response (client/post token-url
+                  {:headers {"Content-Type" "application/x-www-form-urlencoded"
+                             "Authorization" authorization-header}
+                   :form-params params})]
+    (if (= (:status response) 200)
+      (walk/keywordize-keys (json/parse-string (:body response)))
+      (throw (ex-info "Failed to obtain access token" {})))))
+    
+
+
+(println (obtain-access-token (client-id) (client-secret) (token-url)))
+;; (defn -main []
+;;   (let [access-token (obtain-access-token)]
+;;     (println "Access token:" access-token)))
